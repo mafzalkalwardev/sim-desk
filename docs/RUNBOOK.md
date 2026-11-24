@@ -38,6 +38,8 @@ If `pm grant` refuses SMS on Android 15 or newer: open the app's App info, tap t
 
 Pairing: Developer options, Wireless debugging. If `adb mdns services` does not already show an authorized device, read the pairing code and the pairing IP:port on the phone, then `adb pair <ip:port> <code>` and `adb connect <connect-ip:port>`.
 
+This PC paired with the Infinix (`adb-07565251B3004195-3bhxID`) on 2026-11-24. The connect port `192.168.1.6:43113` then closed, so the phone is paired but not attached. Leave the Wireless debugging screen open and run `adb connect` against the IP and port printed there. Do not pair again unless the phone says the computer is forgotten.
+
 ## Test
 
 `npm test`

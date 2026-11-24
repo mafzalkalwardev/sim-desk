@@ -1,0 +1,10 @@
+flowchart LR
+  operator[Operator] -->|compose| desk[Dashboard]
+  desk -->|POST messages| api[NextAPI]
+  api --> db[SQLite]
+  phone[GatewayApp] -->|GET pending| api
+  phone -->|SmsManager| sim[PhoneSIM]
+  sim --> messagesApp[MessagesApp]
+  phone -->|POST report| api
+  phone -->|POST inbox| api
+  desk -->|GET messages| api
