@@ -1,0 +1,23 @@
+# Security policy
+
+## Reporting
+
+Use GitHub private vulnerability reporting on this repository.
+Do not open a public issue for a security report.
+Do not include exploit details, credentials, or live customer data.
+
+## Supported versions
+
+| Version | Supported |
+| --- | --- |
+| 0.1.x | yes |
+
+## Secrets
+
+Runtime secrets belong in the host environment. `.env.example` lists keys with empty values.
+
+`OPERATOR_KEY` authorizes the dashboard and the operator API. Each phone has its own device token. Neither value is committed. The server stores only a hash of the device token.
+
+The process binds the device API on the LAN so the phone can poll. Do not put that port on the public internet. A send from this desk leaves from the operator's own SIM and can cost money or reach a real person.
+
+The rate cap is 10 queued messages a minute and 5 recipients on one request. It is a safety stop for a bug, not a bulk product. There is no contact import.

@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+.next/
+graphify-out/
+data/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk

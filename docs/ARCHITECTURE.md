@@ -1,0 +1,33 @@
+# Architecture
+
+sim-desk is two processes. The Next.js server on the PC owns the queue. The Android app on the phone owns the SIM.
+
+## Runtime
+
+- `src/app/api/**` — route handlers.
+- `src/db/schema.ts` — Drizzle tables `devices` and `messages`.
+- `src/db/client.ts` — the `better-sqlite3` connection.
+- `src/lib/auth.ts` — `OPERATOR_KEY` check and device-token hashes.
+- `src/lib/phone.ts` — E.164 check, recipient cap, rate cap.
+- `src/lib/messages.ts` — queue, pending pull, status report, inbox insert.
+- `src/app/page.tsx` — the exchange desk.
+- `android/` — package `dev.simdesk.gateway`. `SmsSender` calls `SmsManager`. `GatewayService` polls and uploads. `InboxReader` reads the telephony provider.
+
+## Request path
+
+1. The desk creates a `devices` row with status `pairing`, a code hash, and an expiry.
+2. The phone `POST /api/devices/register` with that code. The row becomes `active` and the response carries a device token. The database keeps the token hash.
+3. The operator `POST /api/messages` with `OPERATOR_KEY`, a recipient list, and a body. Each recipient becomes one `messages` row in `queued`.
+4. The phone `GET /api/devices/:id/pending` with its token, sends each row, then `POST /api/devices/:id/report`.
+5. The phone `POST /api/devices/:id/inbox` with new telephony rows. The tape reads `GET /api/messages`.
+6. Heartbeats land on `POST /api/devices/:id/heartbeat`. Online means a heartbeat newer than 90 seconds.
+
+While wireless debugging is connected, the server can `adb shell am broadcast` after a queue so the phone polls immediately. `adb reverse tcp:3000 tcp:3000` lets the phone use `http://127.0.0.1:3000`. The pairing card also shows `LAN_BASE_URL` for when the reverse tunnel is down.
+
+## Data store
+
+SQLite file at `DATABASE_PATH`, default `data/sim-desk.sqlite`. `devices` holds name, status, pairing hash, token hash, last heartbeat, battery, and adb serial. `messages` holds device id, direction, address, body, status, provider id, and timestamps.
+
+## Tests
+
+Vitest, in `src/lib/*.test.ts` and `src/app/api/**/*.test.ts`. They hit the route handlers and a temporary SQLite file. The Android module is exercised on the handset, not in Vitest.
