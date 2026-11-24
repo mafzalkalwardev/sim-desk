@@ -1,10 +1,12 @@
 node_modules/
 .agents/
+skills-lock.json
 .env
 .env.*
 !.env.example
 dist/
 .next/
+tsconfig.tsbuildinfo
 graphify-out/
 data/
 android/.gradle/
