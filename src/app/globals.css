@@ -164,6 +164,10 @@ textarea { min-height: 88px; resize: vertical; }
 
 .empty { font-family: var(--tape); }
 
+.answers { margin-top: 28px; max-width: 68ch; }
+.answers h2 { font-family: var(--display); font-size: 22px; font-weight: 560; margin: 18px 0 6px; }
+.answers p { margin: 0; }
+
 @media (max-width: 1024px) {
   .desk { grid-template-columns: 72px 1fr; }
   .rail { padding: 18px 10px; }

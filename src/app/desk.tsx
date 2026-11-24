@@ -60,20 +60,6 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
   }, [operatorKey]);
 
   useEffect(() => {
-    if (reduce) return;
-    const lamps = document.querySelectorAll(".lamp");
-    if (lamps.length === 0) return;
-    let cancelled = false;
-    void import("gsap").then(({ default: gsap }) => {
-      if (cancelled) return;
-      gsap.to(lamps, { backgroundColor: online ? "#E39B2B" : "#1C1915", duration: 0.24 });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [online, reduce]);
-
-  useEffect(() => {
     if (reduce || !tapeRef.current) return;
     let cancelled = false;
     void import("gsap").then(({ default: gsap }) => {
@@ -93,6 +79,20 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
 
   const handset = devices[0];
   const online = Boolean(handset?.online);
+
+  useEffect(() => {
+    if (reduce) return;
+    const lamps = document.querySelectorAll(".lamp");
+    if (lamps.length === 0) return;
+    let cancelled = false;
+    void import("gsap").then(({ default: gsap }) => {
+      if (cancelled) return;
+      gsap.to(lamps, { backgroundColor: online ? "#E39B2B" : "#1C1915", duration: 0.24 });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [online, reduce]);
 
   async function pair() {
     setError("");
@@ -129,6 +129,9 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
           <img src="/logo.svg" alt="" width={48} height={48} />
           <h1>SIM Desk</h1>
         </div>
+        <p className="meta">
+          SIM Desk is for the person at this computer. It queues a text here, the paired Android phone sends it through that phone&apos;s SIM, and the tape shows what the line did.
+        </p>
         <div className="lamp-row">
           <span className={online ? "lamp on" : "lamp"} aria-hidden="true" />
           <p className="handset-name">{handset?.name || "No handset"}</p>
@@ -177,6 +180,18 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
             ))}
           </AnimatePresence>
           {error ? <p className="error">{error}</p> : null}
+          <section className="answers">
+            <h2>What is SIM Desk?</h2>
+            <p>
+              SIM Desk is for the operator at this PC. It queues SMS on the computer, the paired phone sends each one through its own SIM, and the tape records the result.
+            </p>
+            <h2>What can SIM Desk do?</h2>
+            <p>
+              It pairs one handset, shows whether that handset is online, queues up to five numbers at a time, caps the desk at ten sends a minute, and mirrors inbox rows the phone is allowed to read.
+            </p>
+            <h2>Who is SIM Desk for?</h2>
+            <p>The operator at the desk, and the handset that acts as the gateway. There is no second account.</p>
+          </section>
         </div>
         <form
           className="compose"

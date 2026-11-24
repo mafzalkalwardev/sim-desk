@@ -326,5 +326,5 @@ function wakePhone() {
   const serial = process.env.ADB_SERIAL;
   const args = ["shell", "am", "broadcast", "-a", "dev.simdesk.gateway.WAKE", "-n", "dev.simdesk.gateway/.WakeReceiver"];
   if (serial) args.unshift("-s", serial);
-  execFile(adb, args, { timeout: 4000 }, () => undefined);
+  execFile(/* turbopackIgnore: true */ adb, args, { timeout: 4000 }, () => undefined);
 }
