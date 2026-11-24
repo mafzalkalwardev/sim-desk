@@ -14,6 +14,6 @@
 
 ## Paid later
 
-- A VPS or a private tunnel — only if the phone and the server can still reach each other. v0.1 keeps SQLite on this PC. A public host would expose the send API.
+- A VPS or a private tunnel — only if the phone and the server can still reach each other. v0.1 keeps SQLite on this PC. A public host would expose the send API. Next step if you need that later: run `npm run build && npm start` on a machine the phone can already route to, and set `LAN_BASE_URL` to that machine. Do not publish port 3000 on the open internet.
 - Firebase Cloud Messaging — free, but it needs a Google project file. v0.1 polls, and wireless adb can wake the app while debugging is connected.
 - A custom domain — the canonical URL is the GitHub repository.
