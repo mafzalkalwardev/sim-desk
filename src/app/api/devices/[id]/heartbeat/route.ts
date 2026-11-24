@@ -1,0 +1,13 @@
+import { fromResult, jsonError } from "@/lib/http";
+import { bearer, heartbeat } from "@/lib/messages";
+
+type Context = { params: Promise<{ id: string }> };
+
+export async function POST(request: Request, context: Context) {
+  const { id } = await context.params;
+  const body = await request.json().catch(() => ({}));
+  const battery = typeof body.battery === "number" ? body.battery : null;
+  const result = heartbeat(id, bearer(request.headers.get("authorization")), battery);
+  if (!result.ok) return jsonError(result.status, result.error);
+  return fromResult(result);
+}
