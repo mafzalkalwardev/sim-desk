@@ -52,9 +52,13 @@ The debug APK build is the Gradle command in Setup.
 
 ## Deploy
 
-No public URL in v0.1. The queue is a SQLite file on this PC, and the send path must stay on the LAN so a stranger cannot spend the SIM.
+The queue file stays on this PC. `npm run build && npm start` listens on `0.0.0.0:3000`. A Cloudflare quick tunnel forwards a public HTTPS host to that port so the desk can be opened away from the LAN. Do not publish port 3000 on the router.
 
-Unpaid next step, only if you later need the phone to reach the desk from another network: run this same `npm run dev` (or `npm run build && npm start`) on a machine the phone can already route to, and set `LAN_BASE_URL` to that machine. Do not publish port 3000 on the open internet. A VPS or a tunnel is optional and is not part of this release. No custom domain.
+The public page does not include `OPERATOR_KEY`. On this PC, `http://127.0.0.1:3000` unlocks by itself. On the public host, paste the key from `.env`. `GET /api/session` answers only for a localhost or private-LAN `Host`.
+
+The current tunnel is `https://9e11cd6d0707bc.app.lhr.life`. A free tunnel host can change if the SSH session drops. The latest host is also on issue #5.
+
+Set `PUBLIC_URL` to the tunnel host after it starts, and set the phone's base URL to that same HTTPS host when `adb reverse` is down. The phone still polls this PC's queue. No custom domain.
 
 ## Environment
 

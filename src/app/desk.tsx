@@ -26,9 +26,11 @@ function clock(value: number) {
   return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string; lanBaseUrl: string }) {
+export default function Desk({ lanBaseUrl, publicUrl }: { lanBaseUrl: string; publicUrl: string }) {
   const reduce = useReducedMotion();
   const tapeRef = useRef<HTMLDivElement>(null);
+  const [deskKey, setDeskKey] = useState("");
+  const [draft, setDraft] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
   const [rows, setRows] = useState<TapeRow[]>([]);
   const [code, setCode] = useState("");
@@ -36,9 +38,26 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const saved = sessionStorage.getItem("simdesk-operator-key");
+    if (saved) {
+      setDeskKey(saved);
+      return;
+    }
+    void fetch("/api/session")
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = (await response.json()) as { key?: string };
+        if (!payload.key) return;
+        sessionStorage.setItem("simdesk-operator-key", payload.key);
+        setDeskKey(payload.key);
+      })
+      .catch(() => undefined);
+  }, []);
+
   async function load() {
-    if (!operatorKey) return;
-    const headers = { "x-operator-key": operatorKey };
+    if (!deskKey) return;
+    const headers = { "x-operator-key": deskKey };
     const [deviceResponse, messageResponse] = await Promise.all([
       fetch("/api/devices", { headers }),
       fetch("/api/messages", { headers }),
@@ -57,7 +76,7 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
     void load();
     const timer = setInterval(() => void load(), 3000);
     return () => clearInterval(timer);
-  }, [operatorKey]);
+  }, [deskKey]);
 
   useEffect(() => {
     if (reduce || !tapeRef.current) return;
@@ -96,7 +115,7 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
 
   async function pair() {
     setError("");
-    const response = await fetch("/api/devices/pairing", { method: "POST", headers: { "x-operator-key": operatorKey } });
+    const response = await fetch("/api/devices/pairing", { method: "POST", headers: { "x-operator-key": deskKey } });
     const payload = (await response.json()) as { code?: string; error?: string };
     if (!response.ok || !payload.code) {
       setError(payload.error || "Could not make a pairing code");
@@ -110,7 +129,7 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
     const recipients = to.split(",").map((item) => item.trim()).filter(Boolean);
     const response = await fetch("/api/messages", {
       method: "POST",
-      headers: { ...jsonHeaders, "x-operator-key": operatorKey },
+      headers: { ...jsonHeaders, "x-operator-key": deskKey },
       body: JSON.stringify({ to: recipients, body }),
     });
     const payload = (await response.json()) as { error?: string };
@@ -142,12 +161,13 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
             : "Pair the phone to light the lamp"}
         </p>
         <div className="pair">
-          <button type="button" onClick={() => void pair()} disabled={!operatorKey}>
+          <button type="button" onClick={() => void pair()} disabled={!deskKey}>
             New pairing code
           </button>
           {code ? <code>{code}</code> : null}
           <p className="meta">Phone URL while debugging: http://127.0.0.1:3000</p>
           {lanBaseUrl ? <p className="meta">LAN: {lanBaseUrl}</p> : null}
+          {publicUrl ? <p className="meta">Live: {publicUrl}</p> : null}
         </div>
       </aside>
       <section className="tape-wrap">
@@ -158,7 +178,26 @@ export default function Desk({ operatorKey, lanBaseUrl }: { operatorKey: string;
         </div>
         <div className="tape" ref={tapeRef}>
           <h2>Message tape</h2>
-          {!operatorKey ? <p className="empty">Set OPERATOR_KEY in .env and restart the desk.</p> : null}
+          {!deskKey ? (
+            <form
+              className="unlock"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const next = draft.trim();
+                if (!next) return;
+                sessionStorage.setItem("simdesk-operator-key", next);
+                setDeskKey(next);
+                setError("");
+              }}
+            >
+              <p className="empty">Unlock the desk with the operator key.</p>
+              <label>
+                <span className="meta">Operator key</span>
+                <input value={draft} onChange={(event) => setDraft(event.target.value)} autoComplete="off" required />
+              </label>
+              <button type="submit">Unlock</button>
+            </form>
+          ) : null}
           {rows.length === 0 ? <p className="empty">The tape is empty.</p> : null}
           <AnimatePresence initial={false}>
             {rows.map((row) => (

@@ -18,6 +18,8 @@ Runtime secrets belong in the host environment. `.env.example` lists keys with e
 
 `OPERATOR_KEY` authorizes the dashboard and the operator API. Each phone has its own device token. Neither value is committed. The server stores only a hash of the device token.
 
+The public page does not receive the operator key. `GET /api/session` returns it only when the `Host` header is localhost or a private LAN address, so a tunnel host cannot read it. On any other host the operator pastes the key into the desk, and the browser keeps it in `sessionStorage`.
+
 The process binds the device API on the LAN so the phone can poll. Do not put that port on the public internet. A send from this desk leaves from the operator's own SIM and can cost money or reach a real person.
 
 The rate cap is 10 queued messages a minute and 5 recipients on one request. It is a safety stop for a bug, not a bulk product. There is no contact import.
