@@ -44,7 +44,7 @@ The Infinix named Infinix is already registered and polling the live desk. Use t
 
 1. Open the desk. On this PC, `http://127.0.0.1:3000` unlocks by itself. On the public URL, paste `OPERATOR_KEY` from `.env` and press Unlock.
 2. Press **New pairing code**. The code is six digits and expires in ten minutes.
-3. On the phone, open SIM Desk. Set Desk URL to `https://simdesk.89.168.127.135.nip.io`.
+3. On the phone, open SIM Desk. Set Desk URL to `https://simdesk.induswebagency.com`.
 4. Type the code, keep or change the handset name, and press Register.
 5. The app stores a device token and starts polling. The lamp shows that handset when a heartbeat arrives. Online means a heartbeat in the last 90 seconds.
 
@@ -66,7 +66,7 @@ The queue runs on the VPS at `/opt/sim-desk`, served by systemd `sim-desk` on `1
 
 The public page does not include `OPERATOR_KEY`. On this PC, `http://127.0.0.1:3000` unlocks by itself only while a local desk is running. On the public host, paste the key from `.env`. `GET /api/session` answers only for a localhost or private-LAN `Host`.
 
-The live desk is `https://simdesk.89.168.127.135.nip.io`. Set the phone's Desk URL to that host. The certificate renews with certbot. This PC can sleep. The phone still has to stay on to send.
+The live desk is `https://simdesk.induswebagency.com`. Set the phone's Desk URL to that host. The certificate renews with certbot. This PC can sleep. The phone still has to stay on to send.
 
 ## Environment
 

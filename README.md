@@ -12,7 +12,7 @@ A local desk queues SMS and the paired Android phone sends each text through its
   <img alt="Android" src="https://img.shields.io/badge/Android-000?logo=android&logoColor=fff">
 </p>
 
-**Live:** https://simdesk.89.168.127.135.nip.io on the VPS. The public page asks for the operator key. Pair a handset from `docs/RUNBOOK.md`.
+**Live:** https://simdesk.induswebagency.com on the VPS. The public page asks for the operator key. Pair a handset from `docs/RUNBOOK.md`.
 
 ## What it does
 
