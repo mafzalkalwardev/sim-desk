@@ -98,7 +98,7 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
   }, [deskKey]);
 
   const handset = devices[0];
-  const from = handset?.lineNumber?.trim() || handset?.carrier?.trim() || "";
+  const from = handset?.lineNumber?.trim() || "";
   const online = Boolean(handset?.online);
 
   useEffect(() => {
@@ -195,7 +195,7 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
           <img src="/logo.svg" alt="" width={40} height={40} />
           <div>
             <h1>SIM Desk</h1>
-            <p className="from">{from ? `From ${from}` : handset ? `From ${handset.name}` : "No handset"}</p>
+            <p className="from">{from ? `From ${from}` : handset ? handset.name : "No handset"}</p>
           </div>
           <span className={online ? "presence on" : "presence"} title={online ? "Online" : "Quiet"} />
         </header>
@@ -229,7 +229,7 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
         </div>
         <details className="handset">
           <summary>Handset {handset ? `· ${online ? "online" : "quiet"}` : ""}</summary>
-          <p>{handset ? `${handset.name}${handset.carrier ? ` · ${handset.carrier}` : ""} · battery ${handset.battery ?? "—"}` : "Pair a phone to send."}</p>
+          <p>{handset ? `${handset.name} · battery ${handset.battery ?? "—"}` : "Pair a phone to send."}</p>
           <form
             className="line-form"
             onSubmit={(event) => {
@@ -296,7 +296,7 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
               </button>
               <div>
                 <h2>{composing ? "New message" : selected}</h2>
-                <p>{from ? `Sending from ${from}` : `Sending from ${handset?.name || "the handset"}`}</p>
+                {from ? <p>Sending from {from}</p> : null}
               </div>
             </header>
             <div className="bubbles" ref={threadRef}>
