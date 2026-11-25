@@ -36,9 +36,19 @@ On PowerShell, run `gradlew.bat` instead of `./gradlew`.
 
 If `pm grant` refuses SMS on Android 15 or newer: open the app's App info, tap the menu, choose Allow restricted settings, then grant SMS. Do not set sim-desk as the default SMS app.
 
-Pairing: Developer options, Wireless debugging. If `adb mdns services` does not already show an authorized device, read the pairing code and the pairing IP:port on the phone, then `adb pair <ip:port> <code>` and `adb connect <connect-ip:port>`.
+Wireless debugging is only for installing the app. Developer options, Wireless debugging. If `adb mdns services` does not already show an authorized device, read the pairing code and the pairing IP:port on the phone, then `adb pair <ip:port> <code>` and `adb connect <connect-ip:port>`. The Infinix (`adb-07565251B3004195-3bhxID`) is already authorized. Connect the IP and port on the Wireless debugging screen. Do not pair again unless the phone says the computer is forgotten.
 
-This PC paired with the Infinix (`adb-07565251B3004195-3bhxID`) on 2026-11-24. The connect port `192.168.1.6:43113` then closed, so the phone is paired but not attached. Leave the Wireless debugging screen open and run `adb connect` against the IP and port printed there. Do not pair again unless the phone says the computer is forgotten.
+## Pair a handset
+
+The Infinix named Infinix is already registered and polling the live desk. Use these steps for another phone, or to register this one again.
+
+1. Open the desk. On this PC, `http://127.0.0.1:3000` unlocks by itself. On the public URL, paste `OPERATOR_KEY` from `.env` and press Unlock.
+2. Press **New pairing code**. The code is six digits and expires in ten minutes.
+3. On the phone, open SIM Desk. Set Desk URL to the live URL below. While `adb reverse tcp:3000 tcp:3000` is active, `http://127.0.0.1:3000` also works.
+4. Type the code, keep or change the handset name, and press Register.
+5. The app stores a device token and starts polling. The lamp shows that handset when a heartbeat arrives. Online means a heartbeat in the last 90 seconds.
+
+The lamp shows the newest registered handset. A send with no chosen device uses the handset whose heartbeat is newest. Grant SMS on the phone before expecting a send. Do not make SIM Desk the default SMS app.
 
 ## Test
 
@@ -52,11 +62,11 @@ The debug APK build is the Gradle command in Setup.
 
 ## Deploy
 
-The queue file stays on this PC. `npm run build && npm start` listens on `0.0.0.0:3000`. A Cloudflare quick tunnel forwards a public HTTPS host to that port so the desk can be opened away from the LAN. Do not publish port 3000 on the router.
+The queue file stays on this PC. `npm run build && npm start` listens on `0.0.0.0:3000`. An SSH tunnel on localhost.run forwards a public HTTPS host to that port. Do not publish port 3000 on the router.
 
 The public page does not include `OPERATOR_KEY`. On this PC, `http://127.0.0.1:3000` unlocks by itself. On the public host, paste the key from `.env`. `GET /api/session` answers only for a localhost or private-LAN `Host`.
 
-The current tunnel is `https://9e11cd6d0707bc.app.lhr.life`. A free tunnel host can change if the SSH session drops. The latest host is also on issue #5.
+The current tunnel is `https://7b32c05f408fb1.app.lhr.life`. The registered Infinix polls that host. A free tunnel host can change if the SSH session drops. The latest host is also on issue #5.
 
 Set `PUBLIC_URL` to the tunnel host after it starts, and set the phone's base URL to that same HTTPS host when `adb reverse` is down. The phone still polls this PC's queue. No custom domain.
 
