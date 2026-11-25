@@ -195,7 +195,7 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
           <img src="/logo.svg" alt="" width={40} height={40} />
           <div>
             <h1>SIM Desk</h1>
-            <p className="from">{from ? `From ${from}` : handset ? handset.name : "No handset"}</p>
+            {from ? <p className="from">{from}</p> : null}
           </div>
           <span className={online ? "presence on" : "presence"} title={online ? "Online" : "Quiet"} />
         </header>
@@ -229,7 +229,7 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
         </div>
         <details className="handset">
           <summary>Handset {handset ? `· ${online ? "online" : "quiet"}` : ""}</summary>
-          <p>{handset ? `${handset.name} · battery ${handset.battery ?? "—"}` : "Pair a phone to send."}</p>
+          <p>{handset ? `Battery ${handset.battery ?? "—"}` : "Pair a phone to send."}</p>
           <form
             className="line-form"
             onSubmit={(event) => {
@@ -285,7 +285,7 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
           <div className="blank">
             <img src="/logo.svg" alt="" width={72} height={72} />
             <h2>Messages</h2>
-            <p>Choose a conversation, or start a new one. Texts go out through {from || handset?.name || "the paired phone"}.</p>
+            <p>Choose a conversation, or start a new one.</p>
           </div>
         ) : null}
         {deskKey && reading ? (
@@ -296,11 +296,11 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
               </button>
               <div>
                 <h2>{composing ? "New message" : selected}</h2>
-                {from ? <p>Sending from {from}</p> : null}
+                {from ? <p>{from}</p> : null}
               </div>
             </header>
             <div className="bubbles" ref={threadRef}>
-              {composing ? <p className="empty">The message leaves from {from || "the paired phone"}.</p> : null}
+              {composing ? <p className="empty">Write a message.</p> : null}
               {visible.map((row) => (
                 <article key={row.id} className={row.direction === "out" ? "bubble out" : "bubble in"}>
                   <p>{row.body}</p>
