@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { threadKey } from "@/lib/address";
 
 type Device = {
   id: string;
@@ -22,9 +23,11 @@ type TapeRow = {
 };
 
 type Conversation = {
+  key: string;
   address: string;
   messages: TapeRow[];
   latest: TapeRow;
+  unread: number;
 };
 
 const jsonHeaders = { "content-type": "application/json" };
@@ -42,8 +45,30 @@ function preview(body: string) {
   return line.length > 72 ? `${line.slice(0, 72)}…` : line;
 }
 
+function dayLabel(value: number) {
+  const date = new Date(value);
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) return "Today";
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+}
+
+function statusLabel(status: string) {
+  if (status === "queued") return "Queued";
+  if (status === "sent") return "Sent";
+  if (status === "delivered") return "Delivered";
+  if (status === "failed") return "Failed";
+  if (status === "received") return "Received";
+  return status;
+}
+
 export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: string }) {
   const threadRef = useRef<HTMLDivElement>(null);
+  const loadGeneration = useRef(0);
+  const signature = useRef("");
+  const stickToBottom = useRef(true);
   const [deskKey, setDeskKey] = useState("");
   const [draftKey, setDraftKey] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
@@ -51,11 +76,15 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
   const [selected, setSelected] = useState("");
   const [composing, setComposing] = useState(false);
   const [query, setQuery] = useState("");
+  const [box, setBox] = useState<"all" | "unread">("all");
   const [to, setTo] = useState("");
   const [body, setBody] = useState("");
   const [code, setCode] = useState("");
   const [lineDraft, setLineDraft] = useState("");
   const [error, setError] = useState("");
+  const [readReady, setReadReady] = useState(false);
+  const [epoch, setEpoch] = useState(0);
+  const [readMap, setReadMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const saved = sessionStorage.getItem("simdesk-operator-key");
@@ -74,20 +103,39 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
       .catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("simdesk-read-epoch");
+    const now = Date.now();
+    if (!saved) localStorage.setItem("simdesk-read-epoch", String(now));
+    setEpoch(saved ? Number(saved) : now);
+    try {
+      setReadMap(JSON.parse(localStorage.getItem("simdesk-read") || "{}") as Record<string, number>);
+    } catch {
+      setReadMap({});
+    }
+    setReadReady(true);
+  }, []);
+
   async function load() {
     if (!deskKey) return;
+    const generation = ++loadGeneration.current;
     const headers = { "x-operator-key": deskKey };
     const [deviceResponse, messageResponse] = await Promise.all([
       fetch("/api/devices", { headers }),
       fetch("/api/messages", { headers }),
     ]);
+    if (generation !== loadGeneration.current) return;
     if (deviceResponse.ok) {
       const payload = (await deviceResponse.json()) as { devices: Device[] };
       setDevices(payload.devices);
     }
     if (messageResponse.ok) {
       const payload = (await messageResponse.json()) as { messages: TapeRow[] };
-      setRows(payload.messages);
+      const nextSignature = payload.messages.map((row) => `${row.id}:${row.status}:${row.updatedAt}`).join("|");
+      if (nextSignature !== signature.current) {
+        signature.current = nextSignature;
+        setRows(payload.messages);
+      }
     }
   }
 
@@ -108,29 +156,69 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
   const conversations = useMemo(() => {
     const groups = new Map<string, TapeRow[]>();
     for (const row of rows) {
-      const bucket = groups.get(row.address) ?? [];
+      const key = threadKey(row.address);
+      if (!key) continue;
+      const bucket = groups.get(key) ?? [];
       bucket.push(row);
-      groups.set(row.address, bucket);
+      groups.set(key, bucket);
     }
     const list: Conversation[] = [];
-    for (const [address, messages] of groups) {
+    for (const [key, messages] of groups) {
       const ordered = [...messages].sort((a, b) => a.createdAt - b.createdAt);
-      list.push({ address, messages: ordered, latest: ordered[ordered.length - 1] });
+      const address = ordered.find((row) => row.address.startsWith("+"))?.address || ordered[ordered.length - 1].address;
+      const seen = readMap[key] ?? epoch;
+      const unread = readReady ? ordered.filter((row) => row.direction === "in" && row.createdAt > seen).length : 0;
+      list.push({ key, address, messages: ordered, latest: ordered[ordered.length - 1], unread });
     }
     list.sort((a, b) => b.latest.createdAt - a.latest.createdAt);
-    const needle = query.trim().toLowerCase();
-    if (!needle) return list;
-    return list.filter((item) => item.address.toLowerCase().includes(needle) || item.latest.body.toLowerCase().includes(needle));
-  }, [rows, query]);
+    return list;
+  }, [rows, readMap, epoch, readReady]);
 
-  const active = conversations.find((item) => item.address === selected) ?? null;
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const searched = needle
+      ? conversations.filter((item) => item.address.toLowerCase().includes(needle) || item.latest.body.toLowerCase().includes(needle))
+      : conversations;
+    return box === "unread" ? searched.filter((item) => item.unread > 0) : searched;
+  }, [conversations, query, box]);
+
+  const unreadTotal = useMemo(() => {
+    if (!readReady) return 0;
+    const groups = new Map<string, TapeRow[]>();
+    for (const row of rows) {
+      if (row.direction !== "in") continue;
+      const key = threadKey(row.address);
+      const bucket = groups.get(key) ?? [];
+      bucket.push(row);
+      groups.set(key, bucket);
+    }
+    let total = 0;
+    for (const [key, messages] of groups) {
+      const seen = readMap[key] ?? epoch;
+      total += messages.filter((row) => row.createdAt > seen).length;
+    }
+    return total;
+  }, [rows, readMap, epoch, readReady]);
+
+  const active = conversations.find((item) => item.key === selected) ?? null;
   const visible = active ? active.messages.slice(-80) : [];
+
+  useEffect(() => {
+    if (!readReady || !selected || !active) return;
+    const latest = active.latest.createdAt;
+    setReadMap((current) => {
+      if ((current[selected] ?? 0) >= latest) return current;
+      const next = { ...current, [selected]: latest };
+      localStorage.setItem("simdesk-read", JSON.stringify(next));
+      return next;
+    });
+  }, [readReady, selected, active]);
 
   useEffect(() => {
     const node = threadRef.current;
     if (!node) return;
-    node.scrollTop = node.scrollHeight;
-  }, [selected, visible.length, body]);
+    if (stickToBottom.current) node.scrollTop = node.scrollHeight;
+  }, [selected, visible.length, visible[visible.length - 1]?.id]);
 
   async function saveLine() {
     if (!handset) return;
@@ -184,6 +272,14 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
     setTo("");
     setBody("");
     setError("");
+    stickToBottom.current = true;
+  }
+
+  function openThread(key: string) {
+    setSelected(key);
+    setComposing(false);
+    setError("");
+    stickToBottom.current = true;
   }
 
   const reading = Boolean(selected) || composing;
@@ -205,25 +301,30 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
             New message
           </button>
         </div>
+        <div className="filters" role="tablist" aria-label="Conversation filter">
+          <button type="button" className={box === "all" ? "on" : ""} onClick={() => setBox("all")}>All</button>
+          <button type="button" className={box === "unread" ? "on" : ""} onClick={() => setBox("unread")}>
+            Unread{unreadTotal > 0 ? ` ${unreadTotal}` : ""}
+          </button>
+        </div>
         <div className="conversations">
-          {conversations.length === 0 ? <p className="empty">No conversations yet.</p> : null}
-          {conversations.map((item) => (
+          {shown.length === 0 ? <p className="empty">{box === "unread" ? "No unread messages." : "No conversations yet."}</p> : null}
+          {shown.map((item) => (
             <button
               type="button"
-              key={item.address}
-              className={item.address === selected ? "conversation selected" : "conversation"}
-              onClick={() => {
-                setSelected(item.address);
-                setComposing(false);
-                setError("");
-              }}
+              key={item.key}
+              className={item.key === selected ? "conversation selected" : item.unread > 0 ? "conversation unread" : "conversation"}
+              onClick={() => openThread(item.key)}
             >
               <span className="avatar" aria-hidden="true">{item.address.replace(/\D/g, "").slice(-2) || "#"}</span>
               <span>
                 <strong>{item.address}</strong>
                 <em>{item.latest.direction === "out" ? "You: " : ""}{preview(item.latest.body)}</em>
               </span>
-              <time dateTime={new Date(item.latest.createdAt).toISOString()}>{clock(item.latest.createdAt)}</time>
+              <span className="meta">
+                <time dateTime={new Date(item.latest.createdAt).toISOString()}>{clock(item.latest.createdAt)}</time>
+                {item.unread > 0 ? <span className="count">{item.unread > 99 ? "99+" : item.unread}</span> : null}
+              </span>
             </button>
           ))}
         </div>
@@ -255,7 +356,7 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
           <h2>What is SIM Desk?</h2>
           <p>SIM Desk queues SMS on this desk. The paired Android phone sends each text through its own SIM.</p>
           <h2>What can SIM Desk do?</h2>
-          <p>It shows conversations, the number the texts are sent from, and whether each text was sent, delivered, or failed.</p>
+          <p>It shows conversations, unread replies, and whether each text was sent, delivered, or failed.</p>
           <h2>Who is SIM Desk for?</h2>
           <p>The operator at the desk, and the Android handset that acts as the gateway.</p>
         </details>
@@ -295,27 +396,43 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
                 Back
               </button>
               <div>
-                <h2>{composing ? "New message" : selected}</h2>
+                <h2>{composing ? "New message" : active?.address || ""}</h2>
                 {from ? <p>{from}</p> : null}
               </div>
             </header>
-            <div className="bubbles" ref={threadRef}>
+            <div
+              className="bubbles"
+              ref={threadRef}
+              onScroll={() => {
+                const node = threadRef.current;
+                if (!node) return;
+                stickToBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80;
+              }}
+            >
               {composing ? <p className="empty">Write a message.</p> : null}
-              {visible.map((row) => (
-                <article key={row.id} className={row.direction === "out" ? "bubble out" : "bubble in"}>
-                  <p>{row.body}</p>
-                  <span>
-                    {clock(row.createdAt)}
-                    {row.direction === "out" ? ` · ${row.status}` : ""}
-                  </span>
-                </article>
-              ))}
+              {visible.map((row, index) => {
+                const previous = visible[index - 1];
+                const showDay = !previous || new Date(previous.createdAt).toDateString() !== new Date(row.createdAt).toDateString();
+                const failed = row.status === "failed";
+                return (
+                  <div key={row.id} className="turn">
+                    {showDay ? <p className="day">{dayLabel(row.createdAt)}</p> : null}
+                    <article className={failed ? "bubble out failed" : row.direction === "out" ? "bubble out" : "bubble in"}>
+                      <p>{row.body}</p>
+                      <span>
+                        {clock(row.createdAt)}
+                        {` · ${statusLabel(row.status)}`}
+                      </span>
+                    </article>
+                  </div>
+                );
+              })}
             </div>
             <form
               className="composer"
               onSubmit={(event) => {
                 event.preventDefault();
-                const address = composing ? to.trim() : selected;
+                const address = composing ? to.trim() : active?.address || "";
                 if (!address || !body.trim()) return;
                 void send(address);
               }}
@@ -328,7 +445,17 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
               ) : null}
               <label className="message">
                 Message
-                <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Text message" required />
+                <textarea
+                  value={body}
+                  onChange={(event) => setBody(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" || event.shiftKey) return;
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }}
+                  placeholder="Text message"
+                  required
+                />
               </label>
               <button type="submit">Send</button>
             </form>

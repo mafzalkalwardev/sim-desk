@@ -196,6 +196,42 @@ describe("handset and queue", () => {
     expect(tape.filter((row) => row.body === "hello desk")).toHaveLength(1);
   });
 
+  it("files a local reply on the same number the desk dialed", async () => {
+    const created = await pair(new Request("http://desk/pair", { method: "POST", headers: { "x-operator-key": "test-key" } }));
+    const pairing = await read(created);
+    const registered = await register(
+      new Request("http://desk/register", {
+        method: "POST",
+        body: JSON.stringify({ code: pairing.code }),
+      }),
+    );
+    const device = await read(registered);
+    const token = String(device.token);
+    await queueRoute(
+      new Request("http://desk/messages", {
+        method: "POST",
+        headers: { "x-operator-key": "test-key" },
+        body: JSON.stringify({ to: ["+923128057463"], body: "same thread" }),
+      }),
+    );
+    const posted = await inboxRoute(
+      new Request("http://desk/inbox", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          messages: [
+            { providerId: "out-local", address: "03128057463", body: "same thread", direction: "out" },
+            { providerId: "in-local", address: "03128057463", body: "got it", direction: "in" },
+          ],
+        }),
+      }),
+      { params: Promise.resolve({ id: String(device.id) }) },
+    );
+    expect((await read(posted)).inserted).toBe(1);
+    const tape = listMessages().filter((row) => row.address === "+923128057463");
+    expect(tape.map((row) => row.body).sort()).toEqual(["got it", "same thread"]);
+  });
+
   it("keeps a saved sender number when the SIM only reports the line name", async () => {
     const created = await pair(new Request("http://desk/pair", { method: "POST", headers: { "x-operator-key": "test-key" } }));
     const pairing = await read(created);

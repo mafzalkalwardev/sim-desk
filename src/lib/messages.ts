@@ -4,6 +4,7 @@ import { randomInt, randomUUID } from "crypto";
 import { devices, messages } from "../db/schema";
 import { getDb } from "../db/client";
 import { fail, hashSecret, newToken, type Result } from "./auth";
+import { canonicalAddress, threadKey } from "./address";
 import { checkLine, checkRecipients } from "./phone";
 
 const PAIRING_MS = 10 * 60 * 1000;
@@ -309,20 +310,23 @@ export function ingestInbox(id: string, token: string, rows: InboxRow[]): Result
     if (!row.providerId || (row.direction !== "in" && row.direction !== "out")) continue;
     const existing = db.select().from(messages).where(eq(messages.providerId, row.providerId)).get();
     if (existing) continue;
+    const address = canonicalAddress(row.address || "");
+    if (!address) continue;
     if (row.direction === "out") {
-      const match = db
+      const key = threadKey(address);
+      const recent = db
         .select()
         .from(messages)
         .where(
           and(
             eq(messages.deviceId, id),
             eq(messages.direction, "out"),
-            eq(messages.address, row.address),
             eq(messages.body, row.body),
             gt(messages.createdAt, now - MATCH_MS),
           ),
         )
-        .get();
+        .all();
+      const match = recent.find((item) => threadKey(item.address) === key);
       if (match) {
         db.update(messages).set({ providerId: row.providerId, updatedAt: now }).where(eq(messages.id, match.id)).run();
         continue;
@@ -333,7 +337,7 @@ export function ingestInbox(id: string, token: string, rows: InboxRow[]): Result
         id: randomUUID(),
         deviceId: id,
         direction: row.direction === "in" ? "in" : "out",
-        address: row.address,
+        address,
         body: row.body ?? "",
         status: row.direction === "in" ? "received" : "sent",
         providerId: row.providerId,
