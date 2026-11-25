@@ -20,6 +20,7 @@ type TapeRow = {
   body: string;
   status: string;
   createdAt: number;
+  updatedAt: number;
 };
 
 type Conversation = {
