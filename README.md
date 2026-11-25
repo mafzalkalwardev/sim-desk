@@ -57,7 +57,7 @@ npm test
 npm run build
 ```
 
-Set `OPERATOR_KEY` in `.env` before `npm run dev`. The desk is at `http://127.0.0.1:3000`. Install and pair the Android app from `android/` using `docs/RUNBOOK.md`.
+Set `OPERATOR_KEY` in `.env` before `npm run dev`. The desk is at `http://127.0.0.1:3000`. Install `android/sim-desk.apk` on the phone, allow SMS, and pair it using `docs/RUNBOOK.md`.
 
 ## Project discovery
 

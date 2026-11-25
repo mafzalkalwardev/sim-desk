@@ -19,7 +19,7 @@
 
 `npm run dev`
 
-Open `http://127.0.0.1:3000`. Create a pairing code, install `android/` (see below), and register the phone.
+Open `http://127.0.0.1:3000`. Create a pairing code, install `android/sim-desk.apk` on the phone, and register it. The same file is the download on the GitHub release.
 
 Android, from `android/` after `ANDROID_HOME` points at the SDK:
 
