@@ -23,4 +23,5 @@ live: https://simdesk.induswebagency.com
 - 2026-11-24 — Review: API tests pass. Desk checked at 320, 768, 1024, and 1440 with no horizontal scroll. Live carrier send stays on #5 because the connect port closed after pairing.
 - 2026-11-24 — Live desk is a localhost.run tunnel to `npm start` on this PC. The operator key is not in the page. Port 3000 is not published on the router. Canonical URL remains the GitHub repository. Release: https://github.com/mafzalkalwardev/sim-desk/releases/tag/v0.1.0
 - 2026-11-25 — The desk runs on the VPS at https://simdesk.induswebagency.com. The Infinix polls that host. systemd keeps it up.
+- 2026-11-25 — Gateway complete. The Infinix sends and receives. The inbox shows conversations, unread replies, and sent, delivered, or failed. This PC can sleep. The phone stays on.
 - Graphify skip: `graphify` is not on PATH, and `gsd-tools.cjs graphify build` exits because `../../../package.json` cannot be resolved. `.planning/config.json` still enables graphify.

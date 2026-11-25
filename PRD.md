@@ -25,7 +25,7 @@ A script or a dashboard cannot send an SMS by itself. Paid carrier APIs rent a n
 - Becoming the default SMS app.
 - Contact import, CSV blasts, or more than 5 recipients on one send.
 - WhatsApp or any messenger other than SMS.
-- A hosted deployment in v0.1.
+- A new paid host. The completed desk runs on the operator's existing VPS.
 
 ## Success
 
@@ -44,12 +44,12 @@ A live carrier send goes only to a number the operator types. The build does not
 
 ## Acceptance criteria
 
-- [ ] Dashboard shows device online state, compose, and the message tape.
-- [ ] Phone registers with a one-time pairing code and sends heartbeats.
-- [ ] Pending messages are sent with `SmsManager` and reported back as sent, delivered, or failed.
-- [ ] Inbox and sent rows the phone can read show on the tape.
-- [ ] A bad number, a missing token, and the rate cap are rejected with a clear status.
-- [ ] `OPERATOR_KEY` and device tokens are not in git.
-- [ ] Layouts hold at 320, 768, 1024, and 1440.
-- [ ] `npm test` passes.
-- [ ] README commands match `package.json`.
+- [x] Dashboard shows device online state, compose, and the message inbox.
+- [x] Phone registers with a one-time pairing code and sends heartbeats.
+- [x] Pending messages are sent with `SmsManager` and reported back as sent, delivered, or failed.
+- [x] Inbox and sent rows the phone can read show in the conversation.
+- [x] A bad number, a missing token, and the rate cap are rejected with a clear status.
+- [x] `OPERATOR_KEY` and device tokens are not in git.
+- [x] Layouts hold at 320, 768, 1024, and 1440.
+- [x] `npm test` passes.
+- [x] README commands match `package.json`.

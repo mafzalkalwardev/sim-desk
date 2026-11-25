@@ -4,7 +4,7 @@
 
 # SIM Desk
 
-A local desk queues SMS and the paired Android phone sends each text through its own SIM.
+SIM Desk is a completed SMS gateway. The desk queues a text, the paired Android phone sends it through its own SIM, and replies come back into the same conversation.
 
 <p>
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-000?logo=nextdotjs&logoColor=fff">
@@ -12,18 +12,21 @@ A local desk queues SMS and the paired Android phone sends each text through its
   <img alt="Android" src="https://img.shields.io/badge/Android-000?logo=android&logoColor=fff">
 </p>
 
-**Live:** https://simdesk.induswebagency.com on the VPS. The public page asks for the operator key. Pair a handset from `docs/RUNBOOK.md`.
+**Live:** https://simdesk.induswebagency.com. The desk stays up on the VPS. This computer can sleep. The phone has to stay on, because the SIM is in the phone. The public page asks for the operator key. Pair a handset from `docs/RUNBOOK.md`. The handset app is [android/sim-desk.apk](android/sim-desk.apk) and the [v0.1.0 release](https://github.com/mafzalkalwardev/sim-desk/releases/download/v0.1.0/sim-desk.apk).
 
 ## What it does
 
-SIM Desk is for the operator at one computer who already has an Android phone with a SIM. The desk queues the text. The phone sends it. The tape shows what happened, without a carrier API or a second number.
+SIM Desk is for an operator who already has an Android phone with a SIM. The live desk is an inbox. The phone sends each text and brings replies back. There is no carrier API and no second number.
 
 ## What it can do
 
-- Pair one handset with a short code and show whether its heartbeat is fresh
-- Queue a text to as many as five numbers, with a cap of ten sends a minute
-- Send through `SmsManager` on the phone and record sent, delivered, or failed
-- Mirror inbox rows the phone is allowed to read, without becoming the default SMS app
+- Pair one handset with a short code and show whether it is online
+- Send a text, then show it as queued, sent, delivered, or failed
+- Show a reply in that same conversation, including when the phone stores a local number and the desk stored the international form
+- Filter the inbox to unread replies
+- Save the sender number on the handset panel when the SIM does not report it
+- Queue up to five numbers, with a cap of ten sends a minute
+- Read inbox rows the phone is allowed to read, without becoming the default SMS app
 
 ## Who made it
 
@@ -63,11 +66,11 @@ Set `OPERATOR_KEY` in `.env` before `npm run dev`. The desk is at `http://127.0.
 
 ### What is SIM Desk?
 
-SIM Desk is a local SMS desk for one operator and one Android phone. The computer queues the message, the phone sends it through its own SIM, and a tape shows the result.
+SIM Desk is an SMS gateway for one operator and one Android phone. The live desk queues the message, the phone sends it through its own SIM, and the inbox shows the reply.
 
 ### What can SIM Desk do?
 
-It pairs a handset, shows when that handset is online, queues up to five recipients, stops at ten sends a minute, reports carrier status, and mirrors inbox rows the phone can read.
+It pairs a handset, shows when that handset is online, sends and receives SMS, keeps a reply in the same conversation, marks new replies unread, and stops at ten sends a minute.
 
 ### Who is SIM Desk for?
 

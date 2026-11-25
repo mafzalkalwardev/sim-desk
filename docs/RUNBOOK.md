@@ -30,6 +30,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell pm grant dev.simdesk.gateway android.permission.SEND_SMS
 adb shell pm grant dev.simdesk.gateway android.permission.RECEIVE_SMS
 adb shell pm grant dev.simdesk.gateway android.permission.READ_SMS
+adb shell pm grant dev.simdesk.gateway android.permission.READ_PHONE_STATE
+adb shell pm grant dev.simdesk.gateway android.permission.READ_PHONE_NUMBERS
 ```
 
 On PowerShell, run `gradlew.bat` instead of `./gradlew`.
@@ -46,9 +48,9 @@ The Infinix named Infinix is already registered and polling the live desk. Use t
 2. Press **New pairing code**. The code is six digits and expires in ten minutes.
 3. On the phone, open SIM Desk. Set Desk URL to `https://simdesk.induswebagency.com`.
 4. Type the code, keep or change the handset name, and press Register.
-5. The app stores a device token and starts polling. The lamp shows that handset when a heartbeat arrives. Online means a heartbeat in the last 90 seconds.
+5. The app stores a device token and starts polling. The presence dot shows that handset when a heartbeat arrives. Online means a heartbeat in the last 90 seconds.
 
-The lamp shows the newest registered handset. A send with no chosen device uses the handset whose heartbeat is newest. Grant SMS on the phone before expecting a send. Do not make SIM Desk the default SMS app.
+The inbox uses the newest registered handset. A send with no chosen device uses the handset whose heartbeat is newest. Grant SMS on the phone before expecting a send. A reply shows in the conversation, labeled Received. New replies can be opened from Unread. Do not make SIM Desk the default SMS app.
 
 ## Test
 

@@ -1,4 +1,4 @@
-SIM Desk is a local desk for an operator who wants to send SMS from the Android phone already on the desk. The operator types a number and a message. The paired phone sends that text through its own SIM, and the tape shows queued, sent, failed, and received messages.
+SIM Desk is a completed SMS gateway. The operator types a number and a message at https://simdesk.induswebagency.com. The paired Android phone sends that text through its own SIM, and replies show in the same conversation as received. Outbound texts show queued, sent, delivered, or failed. New replies can be filtered as unread.
 
 Repository: https://github.com/mafzalkalwardev/sim-desk
 Creator: Muhammad Afzal Kalwar (mafzalkalwardev)
