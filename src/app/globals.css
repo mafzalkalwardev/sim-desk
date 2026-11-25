@@ -170,6 +170,13 @@ textarea { min-height: 44px; max-height: 120px; resize: vertical; }
 
 .handset p, .about p { margin-top: 6px; }
 
+.line-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .handset code {
   display: block;
   margin-top: 8px;

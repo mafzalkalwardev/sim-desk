@@ -9,6 +9,8 @@ import { POST as heartbeatRoute } from "../app/api/devices/[id]/heartbeat/route"
 import { GET as pendingRoute } from "../app/api/devices/[id]/pending/route";
 import { POST as reportRoute } from "../app/api/devices/[id]/report/route";
 import { POST as inboxRoute } from "../app/api/devices/[id]/inbox/route";
+import { POST as lineRoute } from "../app/api/devices/[id]/line/route";
+import { GET as devicesRoute } from "../app/api/devices/route";
 import { POST as queueRoute } from "../app/api/messages/route";
 import { listMessages } from "./messages";
 
@@ -192,5 +194,55 @@ describe("handset and queue", () => {
     const tape = listMessages();
     expect(tape.filter((row) => row.body === "reply")).toHaveLength(1);
     expect(tape.filter((row) => row.body === "hello desk")).toHaveLength(1);
+  });
+
+  it("keeps a saved sender number when the SIM only reports the line name", async () => {
+    const created = await pair(new Request("http://desk/pair", { method: "POST", headers: { "x-operator-key": "test-key" } }));
+    const pairing = await read(created);
+    const registered = await register(
+      new Request("http://desk/register", {
+        method: "POST",
+        body: JSON.stringify({ code: pairing.code, name: "Infinix" }),
+      }),
+    );
+    const device = await read(registered);
+    const token = String(device.token);
+    const id = String(device.id);
+
+    const named = await heartbeatRoute(
+      new Request("http://desk/heartbeat", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        body: JSON.stringify({ battery: 90, carrier: "Zong" }),
+      }),
+      { params: Promise.resolve({ id }) },
+    );
+    expect(named.status).toBe(200);
+    const namedBody = await read(named);
+    expect(namedBody.carrier).toBe("Zong");
+    expect(namedBody.lineNumber).toBeNull();
+
+    const saved = await lineRoute(
+      new Request("http://desk/line", {
+        method: "POST",
+        headers: { "x-operator-key": "test-key" },
+        body: JSON.stringify({ lineNumber: "+923001234567" }),
+      }),
+      { params: Promise.resolve({ id }) },
+    );
+    expect(saved.status).toBe(200);
+
+    await heartbeatRoute(
+      new Request("http://desk/heartbeat", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        body: JSON.stringify({ battery: 90, carrier: "Zong" }),
+      }),
+      { params: Promise.resolve({ id }) },
+    );
+    const listed = await devicesRoute(new Request("http://desk/devices", { headers: { "x-operator-key": "test-key" } }));
+    const row = ((await read(listed)).devices as { lineNumber: string; carrier: string }[])[0];
+    expect(row.lineNumber).toBe("+923001234567");
+    expect(row.carrier).toBe("Zong");
   });
 });

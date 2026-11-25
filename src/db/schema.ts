@@ -11,6 +11,7 @@ export const devices = sqliteTable("devices", {
   battery: integer("battery"),
   adbSerial: text("adb_serial"),
   lineNumber: text("line_number"),
+  carrier: text("carrier"),
   createdAt: integer("created_at").notNull(),
 });
 

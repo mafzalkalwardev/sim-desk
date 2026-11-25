@@ -14,9 +14,10 @@ class DeskClient(
 ) {
     data class Pending(val id: String, val address: String, val body: String)
 
-    fun heartbeat(battery: Int, lineNumber: String) {
+    fun heartbeat(battery: Int, line: LineNumber.Identity) {
         val body = JSONObject().put("battery", battery)
-        if (lineNumber.isNotBlank()) body.put("lineNumber", lineNumber)
+        if (line.number.isNotBlank()) body.put("lineNumber", line.number)
+        if (line.carrier.isNotBlank()) body.put("carrier", line.carrier)
         post("/api/devices/$deviceId/heartbeat", body, auth = true)
     }
 

@@ -2,7 +2,7 @@
 
 ## Visual concept
 
-SIM Desk uses the shape of a messaging inbox. A conversation list sits on the left, the open thread sits on the right, and the composer is pinned to the bottom of the thread. Outbound texts sit on the right and inbound texts sit on the left. The mark and the wordmark stay SIM Desk. The sender number, reported by the paired phone, is shown above the list and in the thread header.
+SIM Desk uses the shape of a messaging inbox. A conversation list sits on the left, the open thread sits on the right, and the composer is pinned to the bottom of the thread. Outbound texts sit on the right and inbound texts sit on the left. The mark and the wordmark stay SIM Desk. The sending line is shown above the list and in the thread header. The phone reports its number when the SIM stores one, and reports the line name otherwise. The operator can save the sender number on the handset panel.
 
 ## Type
 

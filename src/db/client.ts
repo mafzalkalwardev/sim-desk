@@ -52,6 +52,9 @@ export function getDb() {
   if (!columns.some((column) => column.name === "line_number")) {
     sqlite.exec("ALTER TABLE devices ADD COLUMN line_number text");
   }
+  if (!columns.some((column) => column.name === "carrier")) {
+    sqlite.exec("ALTER TABLE devices ADD COLUMN carrier text");
+  }
   cached = drizzle(sqlite, { schema });
   cachedPath = file;
   return cached;

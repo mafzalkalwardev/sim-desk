@@ -8,6 +8,7 @@ type Device = {
   online: boolean;
   battery: number | null;
   lineNumber: string | null;
+  carrier: string | null;
   lastHeartbeat: number | null;
 };
 
@@ -53,6 +54,7 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
   const [to, setTo] = useState("");
   const [body, setBody] = useState("");
   const [code, setCode] = useState("");
+  const [lineDraft, setLineDraft] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -96,8 +98,12 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
   }, [deskKey]);
 
   const handset = devices[0];
-  const from = handset?.lineNumber?.trim() || "";
+  const from = handset?.lineNumber?.trim() || handset?.carrier?.trim() || "";
   const online = Boolean(handset?.online);
+
+  useEffect(() => {
+    if (handset?.lineNumber) setLineDraft(handset.lineNumber);
+  }, [handset?.lineNumber]);
 
   const conversations = useMemo(() => {
     const groups = new Map<string, TapeRow[]>();
@@ -125,6 +131,23 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
     if (!node) return;
     node.scrollTop = node.scrollHeight;
   }, [selected, visible.length, body]);
+
+  async function saveLine() {
+    if (!handset) return;
+    setError("");
+    const response = await fetch(`/api/devices/${handset.id}/line`, {
+      method: "POST",
+      headers: { ...jsonHeaders, "x-operator-key": deskKey },
+      body: JSON.stringify({ lineNumber: lineDraft }),
+    });
+    const payload = (await response.json()) as { error?: string; lineNumber?: string };
+    if (!response.ok) {
+      setError(payload.error || "Could not save the sender number");
+      return;
+    }
+    if (payload.lineNumber) setLineDraft(payload.lineNumber);
+    await load();
+  }
 
   async function pair() {
     setError("");
@@ -206,8 +229,23 @@ export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: str
         </div>
         <details className="handset">
           <summary>Handset {handset ? `· ${online ? "online" : "quiet"}` : ""}</summary>
-          <p>{handset ? `${handset.name} · battery ${handset.battery ?? "—"}` : "Pair a phone to send."}</p>
-          <p>{from ? `Sender number ${from}` : "The sender number appears after the phone reports it."}</p>
+          <p>{handset ? `${handset.name}${handset.carrier ? ` · ${handset.carrier}` : ""} · battery ${handset.battery ?? "—"}` : "Pair a phone to send."}</p>
+          <form
+            className="line-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveLine();
+            }}
+          >
+            <input
+              value={lineDraft}
+              onChange={(event) => setLineDraft(event.target.value)}
+              placeholder="Sender number"
+              aria-label="Sender number"
+              inputMode="tel"
+            />
+            <button type="submit" disabled={!deskKey || !handset}>Save</button>
+          </form>
           <button type="button" onClick={() => void pair()} disabled={!deskKey}>New pairing code</button>
           {code ? <code>{code}</code> : null}
           {publicUrl ? <p>Desk {publicUrl}</p> : null}

@@ -4,7 +4,7 @@ import { randomInt, randomUUID } from "crypto";
 import { devices, messages } from "../db/schema";
 import { getDb } from "../db/client";
 import { fail, hashSecret, newToken, type Result } from "./auth";
-import { checkRecipients } from "./phone";
+import { checkLine, checkRecipients } from "./phone";
 
 const PAIRING_MS = 10 * 60 * 1000;
 const ONLINE_MS = 90 * 1000;
@@ -27,6 +27,7 @@ export type DeviceView = {
   lastHeartbeat: number | null;
   battery: number | null;
   lineNumber: string | null;
+  carrier: string | null;
   online: boolean;
 };
 
@@ -117,17 +118,26 @@ export function registerDevice(code: string, name: string): Result<{ id: string;
   return { ok: true, data: { id: row.id, token, name: label } };
 }
 
-export function heartbeat(id: string, token: string, battery: number | null, lineNumber: string | null = null): Result<DeviceView> {
+export function heartbeat(
+  id: string,
+  token: string,
+  battery: number | null,
+  lineNumber: string | null = null,
+  carrier: string | null = null,
+): Result<DeviceView> {
   const row = deviceByToken(id, token);
   if (!row) return fail(401, "Device token required");
   const now = Date.now();
   const db = getDb();
-  const line = lineNumber?.trim().slice(0, 20) ?? "";
+  const checked = lineNumber ? checkLine(lineNumber) : null;
+  const line = checked?.ok ? checked.data : "";
+  const network = carrier?.trim().slice(0, 40) ?? "";
   db.update(devices)
     .set({
       lastHeartbeat: now,
       battery: battery === null ? row.battery : Math.max(0, Math.min(100, Math.round(battery))),
       ...(line ? { lineNumber: line } : {}),
+      ...(network ? { carrier: network } : {}),
     })
     .where(eq(devices.id, id))
     .run();
@@ -145,8 +155,21 @@ function viewDevice(row: typeof devices.$inferSelect): DeviceView {
     lastHeartbeat: row.lastHeartbeat,
     battery: row.battery,
     lineNumber: row.lineNumber,
+    carrier: row.carrier,
     online: row.status === "active" && fresh,
   };
+}
+
+export function setLineNumber(id: string, lineNumber: string): Result<DeviceView> {
+  const checked = checkLine(lineNumber);
+  if (!checked.ok) return checked;
+  const db = getDb();
+  const row = db.select().from(devices).where(eq(devices.id, id)).get();
+  if (!row || row.status !== "active") return fail(404, "Handset not found");
+  db.update(devices).set({ lineNumber: checked.data }).where(eq(devices.id, id)).run();
+  const next = db.select().from(devices).where(eq(devices.id, id)).get();
+  if (!next) return fail(404, "Handset not found");
+  return { ok: true, data: viewDevice(next) };
 }
 
 export function listDevices(): DeviceView[] {
