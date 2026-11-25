@@ -10,6 +10,7 @@ export const devices = sqliteTable("devices", {
   lastHeartbeat: integer("last_heartbeat"),
   battery: integer("battery"),
   adbSerial: text("adb_serial"),
+  lineNumber: text("line_number"),
   createdAt: integer("created_at").notNull(),
 });
 

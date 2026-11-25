@@ -7,7 +7,8 @@ export async function POST(request: Request, context: Context) {
   const { id } = await context.params;
   const body = await request.json().catch(() => ({}));
   const battery = typeof body.battery === "number" ? body.battery : null;
-  const result = heartbeat(id, bearer(request.headers.get("authorization")), battery);
+  const lineNumber = typeof body.lineNumber === "string" ? body.lineNumber : null;
+  const result = heartbeat(id, bearer(request.headers.get("authorization")), battery, lineNumber);
   if (!result.ok) return jsonError(result.status, result.error);
   return fromResult(result);
 }

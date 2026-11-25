@@ -1,13 +1,13 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Device = {
   id: string;
   name: string;
   online: boolean;
   battery: number | null;
+  lineNumber: string | null;
   lastHeartbeat: number | null;
 };
 
@@ -20,22 +20,39 @@ type TapeRow = {
   createdAt: number;
 };
 
+type Conversation = {
+  address: string;
+  messages: TapeRow[];
+  latest: TapeRow;
+};
+
 const jsonHeaders = { "content-type": "application/json" };
 
 function clock(value: number) {
-  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const date = new Date(value);
+  const today = new Date();
+  const sameDay = date.toDateString() === today.toDateString();
+  if (sameDay) return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-export default function Desk({ lanBaseUrl, publicUrl }: { lanBaseUrl: string; publicUrl: string }) {
-  const reduce = useReducedMotion();
-  const tapeRef = useRef<HTMLDivElement>(null);
+function preview(body: string) {
+  const line = body.replace(/\s+/g, " ").trim();
+  return line.length > 72 ? `${line.slice(0, 72)}…` : line;
+}
+
+export default function Desk({ publicUrl }: { lanBaseUrl: string; publicUrl: string }) {
+  const threadRef = useRef<HTMLDivElement>(null);
   const [deskKey, setDeskKey] = useState("");
-  const [draft, setDraft] = useState("");
+  const [draftKey, setDraftKey] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
   const [rows, setRows] = useState<TapeRow[]>([]);
-  const [code, setCode] = useState("");
+  const [selected, setSelected] = useState("");
+  const [composing, setComposing] = useState(false);
+  const [query, setQuery] = useState("");
   const [to, setTo] = useState("");
   const [body, setBody] = useState("");
+  const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -78,40 +95,36 @@ export default function Desk({ lanBaseUrl, publicUrl }: { lanBaseUrl: string; pu
     return () => clearInterval(timer);
   }, [deskKey]);
 
-  useEffect(() => {
-    if (reduce || !tapeRef.current) return;
-    let cancelled = false;
-    void import("gsap").then(({ default: gsap }) => {
-      if (cancelled || !tapeRef.current) return;
-      gsap.from(tapeRef.current.querySelectorAll(".row"), {
-        y: 8,
-        opacity: 0,
-        stagger: 0.04,
-        duration: 0.35,
-        clearProps: "transform,opacity",
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [reduce]);
-
   const handset = devices[0];
+  const from = handset?.lineNumber?.trim() || "";
   const online = Boolean(handset?.online);
 
+  const conversations = useMemo(() => {
+    const groups = new Map<string, TapeRow[]>();
+    for (const row of rows) {
+      const bucket = groups.get(row.address) ?? [];
+      bucket.push(row);
+      groups.set(row.address, bucket);
+    }
+    const list: Conversation[] = [];
+    for (const [address, messages] of groups) {
+      const ordered = [...messages].sort((a, b) => a.createdAt - b.createdAt);
+      list.push({ address, messages: ordered, latest: ordered[ordered.length - 1] });
+    }
+    list.sort((a, b) => b.latest.createdAt - a.latest.createdAt);
+    const needle = query.trim().toLowerCase();
+    if (!needle) return list;
+    return list.filter((item) => item.address.toLowerCase().includes(needle) || item.latest.body.toLowerCase().includes(needle));
+  }, [rows, query]);
+
+  const active = conversations.find((item) => item.address === selected) ?? null;
+  const visible = active ? active.messages.slice(-80) : [];
+
   useEffect(() => {
-    if (reduce) return;
-    const lamps = document.querySelectorAll(".lamp");
-    if (lamps.length === 0) return;
-    let cancelled = false;
-    void import("gsap").then(({ default: gsap }) => {
-      if (cancelled) return;
-      gsap.to(lamps, { backgroundColor: online ? "#E39B2B" : "#1C1915", duration: 0.24 });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [online, reduce]);
+    const node = threadRef.current;
+    if (!node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [selected, visible.length, body]);
 
   async function pair() {
     setError("");
@@ -124,13 +137,12 @@ export default function Desk({ lanBaseUrl, publicUrl }: { lanBaseUrl: string; pu
     setCode(payload.code);
   }
 
-  async function send() {
+  async function send(address: string) {
     setError("");
-    const recipients = to.split(",").map((item) => item.trim()).filter(Boolean);
     const response = await fetch("/api/messages", {
       method: "POST",
       headers: { ...jsonHeaders, "x-operator-key": deskKey },
-      body: JSON.stringify({ to: recipients, body }),
+      body: JSON.stringify({ to: [address], body }),
     });
     const payload = (await response.json()) as { error?: string };
     if (!response.ok) {
@@ -138,117 +150,153 @@ export default function Desk({ lanBaseUrl, publicUrl }: { lanBaseUrl: string; pu
       return;
     }
     setBody("");
+    setSelected(address);
+    setComposing(false);
     await load();
   }
 
+  function openNew() {
+    setComposing(true);
+    setSelected("");
+    setTo("");
+    setBody("");
+    setError("");
+  }
+
+  const reading = Boolean(selected) || composing;
+
   return (
-    <main className="desk">
-      <aside className="rail">
-        <div className="mark">
-          <img src="/logo.svg" alt="" width={48} height={48} />
-          <h1>SIM Desk</h1>
-        </div>
-        <p className="meta">
-          SIM Desk is for the person at this computer. It queues a text here, the paired Android phone sends it through that phone&apos;s SIM, and the tape shows what the line did.
-        </p>
-        <div className="lamp-row">
-          <span className={online ? "lamp on" : "lamp"} aria-hidden="true" />
-          <p className="handset-name">{handset?.name || "No handset"}</p>
-        </div>
-        <p className="meta">
-          {handset
-            ? `${online ? "Online" : "Quiet"} · battery ${handset.battery ?? "—"}`
-            : "Pair the phone to light the lamp"}
-        </p>
-        <div className="pair">
-          <button type="button" onClick={() => void pair()} disabled={!deskKey}>
-            New pairing code
+    <main className={reading ? "voice reading" : "voice"}>
+      <aside className="inbox">
+        <header className="brand">
+          <img src="/logo.svg" alt="" width={40} height={40} />
+          <div>
+            <h1>SIM Desk</h1>
+            <p className="from">{from ? `From ${from}` : handset ? `From ${handset.name}` : "No handset"}</p>
+          </div>
+          <span className={online ? "presence on" : "presence"} title={online ? "Online" : "Quiet"} />
+        </header>
+        <div className="tools">
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search conversations" aria-label="Search conversations" />
+          <button type="button" onClick={openNew} disabled={!deskKey}>
+            New message
           </button>
-          {code ? <code>{code}</code> : null}
-          <p className="meta">Phone URL while debugging: http://127.0.0.1:3000</p>
-          {lanBaseUrl ? <p className="meta">LAN: {lanBaseUrl}</p> : null}
-          {publicUrl ? <p className="meta">Live: {publicUrl}</p> : null}
         </div>
-      </aside>
-      <section className="tape-wrap">
-        <div className="narrow-status">
-          <span className={online ? "lamp on" : "lamp"} aria-hidden="true" />
-          <strong>{handset?.name || "No handset"}</strong>
-          <span className="meta">{online ? "Online" : "Quiet"}</span>
-        </div>
-        <div className="tape" ref={tapeRef}>
-          <h2>Message tape</h2>
-          {!deskKey ? (
-            <form
-              className="unlock"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const next = draft.trim();
-                if (!next) return;
-                sessionStorage.setItem("simdesk-operator-key", next);
-                setDeskKey(next);
+        <div className="conversations">
+          {conversations.length === 0 ? <p className="empty">No conversations yet.</p> : null}
+          {conversations.map((item) => (
+            <button
+              type="button"
+              key={item.address}
+              className={item.address === selected ? "conversation selected" : "conversation"}
+              onClick={() => {
+                setSelected(item.address);
+                setComposing(false);
                 setError("");
               }}
             >
-              <p className="empty">Unlock the desk with the operator key.</p>
-              <label>
-                <span className="meta">Operator key</span>
-                <input value={draft} onChange={(event) => setDraft(event.target.value)} autoComplete="off" required />
-              </label>
-              <button type="submit">Unlock</button>
-            </form>
-          ) : null}
-          {rows.length === 0 ? <p className="empty">The tape is empty.</p> : null}
-          <AnimatePresence initial={false}>
-            {rows.map((row) => (
-              <motion.article
-                className={`row ${row.status}`}
-                key={row.id}
-                initial={reduce ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={reduce ? { duration: 0 } : { duration: 0.25 }}
-              >
-                <time dateTime={new Date(row.createdAt).toISOString()}>{clock(row.createdAt)}</time>
-                <span>{row.direction === "in" ? "in" : "out"} {row.status}</span>
-                <p>
-                  {row.address}
-                  {"\n"}
-                  {row.body}
-                </p>
-              </motion.article>
-            ))}
-          </AnimatePresence>
-          {error ? <p className="error">{error}</p> : null}
-          <section className="answers">
-            <h2>What is SIM Desk?</h2>
-            <p>
-              SIM Desk is for the operator at this PC. It queues SMS on the computer, the paired phone sends each one through its own SIM, and the tape records the result.
-            </p>
-            <h2>What can SIM Desk do?</h2>
-            <p>
-              It pairs one handset, shows whether that handset is online, queues up to five numbers at a time, caps the desk at ten sends a minute, and mirrors inbox rows the phone is allowed to read.
-            </p>
-            <h2>Who is SIM Desk for?</h2>
-            <p>The operator at the desk, and the handset that acts as the gateway. There is no second account.</p>
-          </section>
+              <span className="avatar" aria-hidden="true">{item.address.replace(/\D/g, "").slice(-2) || "#"}</span>
+              <span>
+                <strong>{item.address}</strong>
+                <em>{item.latest.direction === "out" ? "You: " : ""}{preview(item.latest.body)}</em>
+              </span>
+              <time dateTime={new Date(item.latest.createdAt).toISOString()}>{clock(item.latest.createdAt)}</time>
+            </button>
+          ))}
         </div>
-        <form
-          className="compose"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void send();
-          }}
-        >
-          <label>
-            <span className="meta">Number</span>
-            <input value={to} onChange={(event) => setTo(event.target.value)} inputMode="tel" autoComplete="tel" required />
-          </label>
-          <label>
-            <span className="meta">Message</span>
-            <textarea value={body} onChange={(event) => setBody(event.target.value)} required />
-          </label>
-          <button type="submit">Send</button>
-        </form>
+        <details className="handset">
+          <summary>Handset {handset ? `· ${online ? "online" : "quiet"}` : ""}</summary>
+          <p>{handset ? `${handset.name} · battery ${handset.battery ?? "—"}` : "Pair a phone to send."}</p>
+          <p>{from ? `Sender number ${from}` : "The sender number appears after the phone reports it."}</p>
+          <button type="button" onClick={() => void pair()} disabled={!deskKey}>New pairing code</button>
+          {code ? <code>{code}</code> : null}
+          {publicUrl ? <p>Desk {publicUrl}</p> : null}
+        </details>
+        <details className="about">
+          <summary>About SIM Desk</summary>
+          <h2>What is SIM Desk?</h2>
+          <p>SIM Desk queues SMS on this desk. The paired Android phone sends each text through its own SIM.</p>
+          <h2>What can SIM Desk do?</h2>
+          <p>It shows conversations, the number the texts are sent from, and whether each text was sent, delivered, or failed.</p>
+          <h2>Who is SIM Desk for?</h2>
+          <p>The operator at the desk, and the Android handset that acts as the gateway.</p>
+        </details>
+      </aside>
+      <section className="thread">
+        {!deskKey ? (
+          <form
+            className="unlock"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const next = draftKey.trim();
+              if (!next) return;
+              sessionStorage.setItem("simdesk-operator-key", next);
+              setDeskKey(next);
+            }}
+          >
+            <img src="/logo.svg" alt="" width={64} height={64} />
+            <h2>Unlock SIM Desk</h2>
+            <label>
+              Operator key
+              <input value={draftKey} onChange={(event) => setDraftKey(event.target.value)} autoComplete="off" required />
+            </label>
+            <button type="submit">Unlock</button>
+          </form>
+        ) : null}
+        {deskKey && !reading ? (
+          <div className="blank">
+            <img src="/logo.svg" alt="" width={72} height={72} />
+            <h2>Messages</h2>
+            <p>Choose a conversation, or start a new one. Texts go out through {from || handset?.name || "the paired phone"}.</p>
+          </div>
+        ) : null}
+        {deskKey && reading ? (
+          <>
+            <header className="thread-bar">
+              <button type="button" className="back" onClick={() => { setSelected(""); setComposing(false); }}>
+                Back
+              </button>
+              <div>
+                <h2>{composing ? "New message" : selected}</h2>
+                <p>{from ? `Sending from ${from}` : `Sending from ${handset?.name || "the handset"}`}</p>
+              </div>
+            </header>
+            <div className="bubbles" ref={threadRef}>
+              {composing ? <p className="empty">The message leaves from {from || "the paired phone"}.</p> : null}
+              {visible.map((row) => (
+                <article key={row.id} className={row.direction === "out" ? "bubble out" : "bubble in"}>
+                  <p>{row.body}</p>
+                  <span>
+                    {clock(row.createdAt)}
+                    {row.direction === "out" ? ` · ${row.status}` : ""}
+                  </span>
+                </article>
+              ))}
+            </div>
+            <form
+              className="composer"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const address = composing ? to.trim() : selected;
+                if (!address || !body.trim()) return;
+                void send(address);
+              }}
+            >
+              {composing ? (
+                <label>
+                  To
+                  <input value={to} onChange={(event) => setTo(event.target.value)} inputMode="tel" autoComplete="tel" required />
+                </label>
+              ) : null}
+              <label className="message">
+                Message
+                <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Text message" required />
+              </label>
+              <button type="submit">Send</button>
+            </form>
+            {error ? <p className="error">{error}</p> : null}
+          </>
+        ) : null}
       </section>
     </main>
   );

@@ -49,7 +49,7 @@ class GatewayService : Service() {
     private fun cycle() {
         val client = DeskClient.from(this) ?: return
         val battery = batteryPercent()
-        client.heartbeat(battery)
+        client.heartbeat(battery, LineNumber.read(this))
         val rows = InboxReader.readNew(this)
         if (rows.length() > 0) client.inbox(rows)
         for (message in client.pending()) {

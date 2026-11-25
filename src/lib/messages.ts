@@ -26,6 +26,7 @@ export type DeviceView = {
   status: string;
   lastHeartbeat: number | null;
   battery: number | null;
+  lineNumber: string | null;
   online: boolean;
 };
 
@@ -116,15 +117,17 @@ export function registerDevice(code: string, name: string): Result<{ id: string;
   return { ok: true, data: { id: row.id, token, name: label } };
 }
 
-export function heartbeat(id: string, token: string, battery: number | null): Result<DeviceView> {
+export function heartbeat(id: string, token: string, battery: number | null, lineNumber: string | null = null): Result<DeviceView> {
   const row = deviceByToken(id, token);
   if (!row) return fail(401, "Device token required");
   const now = Date.now();
   const db = getDb();
+  const line = lineNumber?.trim().slice(0, 20) ?? "";
   db.update(devices)
     .set({
       lastHeartbeat: now,
       battery: battery === null ? row.battery : Math.max(0, Math.min(100, Math.round(battery))),
+      ...(line ? { lineNumber: line } : {}),
     })
     .where(eq(devices.id, id))
     .run();
@@ -141,6 +144,7 @@ function viewDevice(row: typeof devices.$inferSelect): DeviceView {
     status: row.status,
     lastHeartbeat: row.lastHeartbeat,
     battery: row.battery,
+    lineNumber: row.lineNumber,
     online: row.status === "active" && fresh,
   };
 }

@@ -48,6 +48,10 @@ export function getDb() {
   sqlite = new Database(file);
   sqlite.pragma("journal_mode = WAL");
   sqlite.exec(MIGRATION);
+  const columns = sqlite.prepare("PRAGMA table_info(devices)").all() as { name: string }[];
+  if (!columns.some((column) => column.name === "line_number")) {
+    sqlite.exec("ALTER TABLE devices ADD COLUMN line_number text");
+  }
   cached = drizzle(sqlite, { schema });
   cachedPath = file;
   return cached;
