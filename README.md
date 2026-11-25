@@ -12,7 +12,7 @@ A local desk queues SMS and the paired Android phone sends each text through its
   <img alt="Android" src="https://img.shields.io/badge/Android-000?logo=android&logoColor=fff">
 </p>
 
-**Live:** https://7b32c05f408fb1.app.lhr.life while this PC is awake. The public page asks for the operator key. The latest host is also on [issue #5](https://github.com/mafzalkalwardev/sim-desk/issues/5). Pair a handset from `docs/RUNBOOK.md`. Do not publish port 3000 on the router.
+**Live:** https://simdesk.89.168.127.135.nip.io on the VPS. The public page asks for the operator key. Pair a handset from `docs/RUNBOOK.md`.
 
 ## What it does
 

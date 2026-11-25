@@ -44,7 +44,7 @@ The Infinix named Infinix is already registered and polling the live desk. Use t
 
 1. Open the desk. On this PC, `http://127.0.0.1:3000` unlocks by itself. On the public URL, paste `OPERATOR_KEY` from `.env` and press Unlock.
 2. Press **New pairing code**. The code is six digits and expires in ten minutes.
-3. On the phone, open SIM Desk. Set Desk URL to the live URL below. While `adb reverse tcp:3000 tcp:3000` is active, `http://127.0.0.1:3000` also works.
+3. On the phone, open SIM Desk. Set Desk URL to `https://simdesk.89.168.127.135.nip.io`.
 4. Type the code, keep or change the handset name, and press Register.
 5. The app stores a device token and starts polling. The lamp shows that handset when a heartbeat arrives. Online means a heartbeat in the last 90 seconds.
 
@@ -62,13 +62,11 @@ The debug APK build is the Gradle command in Setup.
 
 ## Deploy
 
-The queue file stays on this PC. `npm run build && npm start` listens on `0.0.0.0:3000`. An SSH tunnel on localhost.run forwards a public HTTPS host to that port. Do not publish port 3000 on the router.
+The queue runs on the VPS at `/opt/sim-desk`, served by systemd `sim-desk` on `127.0.0.1:3030`, with nginx and HTTPS in front. The database is `/var/lib/sim-desk/sim-desk.sqlite`. `OPERATOR_KEY` is in `/etc/sim-desk.env` on that server. Do not publish the Node port.
 
-The public page does not include `OPERATOR_KEY`. On this PC, `http://127.0.0.1:3000` unlocks by itself. On the public host, paste the key from `.env`. `GET /api/session` answers only for a localhost or private-LAN `Host`.
+The public page does not include `OPERATOR_KEY`. On this PC, `http://127.0.0.1:3000` unlocks by itself only while a local desk is running. On the public host, paste the key from `.env`. `GET /api/session` answers only for a localhost or private-LAN `Host`.
 
-The current tunnel is `https://7b32c05f408fb1.app.lhr.life`. The registered Infinix polls that host. A free tunnel host can change if the SSH session drops. The latest host is also on issue #5.
-
-Set `PUBLIC_URL` to the tunnel host after it starts, and set the phone's base URL to that same HTTPS host when `adb reverse` is down. The phone still polls this PC's queue. No custom domain.
+The live desk is `https://simdesk.89.168.127.135.nip.io`. Set the phone's Desk URL to that host. The certificate renews with certbot. This PC can sleep. The phone still has to stay on to send.
 
 ## Environment
 

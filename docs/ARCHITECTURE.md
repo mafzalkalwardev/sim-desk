@@ -22,7 +22,7 @@ sim-desk is two processes. The Next.js server on the PC owns the queue. The Andr
 5. The phone `POST /api/devices/:id/inbox` with new telephony rows. The tape reads `GET /api/messages`.
 6. Heartbeats land on `POST /api/devices/:id/heartbeat`. Online means a heartbeat newer than 90 seconds.
 
-While wireless debugging is connected, the server can `adb shell am broadcast` after a queue so the phone polls immediately. `adb reverse tcp:3000 tcp:3000` lets the phone use `http://127.0.0.1:3000`. After that reverse drops, the phone polls `PUBLIC_URL`. The pairing card also shows `LAN_BASE_URL`.
+After registration, the phone polls `PUBLIC_URL`. The live host is the VPS.
 
 ## Data store
 
